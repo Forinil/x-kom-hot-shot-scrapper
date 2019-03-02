@@ -48,10 +48,13 @@ def send_message_to_slack():
                                 '$old_price.\n>New price: $new_price.')
     message_text = message_template.substitute(hot_shot_url=hot_shot_url, product_name=product_name,
                                                old_price=old_price, new_price=new_price)
+
+    # Get channel to use
+    channel = os.getenv('XKS_CHANNEL', 'general')
     # Send message
     sc.api_call(
         'chat.postMessage',
-        channel='general',
+        channel=channel,
         text=message_text,
         unfurl_links=True,
         unfurl_media=True
