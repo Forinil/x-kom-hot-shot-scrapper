@@ -1,4 +1,5 @@
 import csv
+import logging
 import re
 from datetime import datetime
 from string import Template
@@ -7,31 +8,38 @@ from urllib.request import urlopen
 from bs4 import BeautifulSoup
 from slackclient import SlackClient
 
+logger = logging.getLogger(__name__)
+
 
 def _fetch_home_page():
     # Fetch x-kom home page content from the internet
+    logger.debug("Fetching x-kom home page")
     return urlopen('https://www.x-kom.pl/')
 
 
 def _parse_home_page(page_content):
     # Parse x-kom home page using BeautifulSoup library
+    logger.debug("Parsing x-kom home page")
     soup = BeautifulSoup(page_content, 'html.parser')
 
     # Get product name, old and new price from the parsed home page
     product_name = soup.find('p', {'class': 'product-name'}).text.strip()
     old_price = soup.find('div', {'class': 'old-price'}).text.strip()
     new_price = soup.find('div', {'class': 'new-price'}).text.strip()
+    logger.debug("Product name: %s, old price: %s, new price: %s", product_name, old_price, new_price)
 
     # Get link to product page from parsed home page
     hot_shot_script = soup.find_all('script', {'type': 'text/javascript'})[1].text.strip()
     regexp = re.compile(r"/goracy_strzal/\d+")
     hot_shot_url = regexp.search(hot_shot_script).group(0)
+    logger.debug("URL to product page: %s", hot_shot_url)
 
     return [product_name, old_price, new_price, hot_shot_url]
 
 
 def save_results_to_csv_log(product_name, old_price, new_price):
     # Save page parsing results to file hot_shot.csv in current working directory
+    logger.debug("Saving parsing results to CSV file")
     with open('hot_shot.csv', 'a', encoding='utf-8') as csv_file:
         writer = csv.writer(csv_file)
         writer.writerow([datetime.now(), product_name, old_price, new_price])
@@ -45,18 +53,22 @@ class XKomProcessor:
 
     def __login_to_slack(self):
         # Login to slack
+        logger.debug("Logging in to Slack")
         return SlackClient(self.__slack_api_token)
 
     def __send_message_to_slack(self, slack_client, product_name, old_price, new_price, hot_shot_url):
         # Compose message
+        logger.debug("Composing Slack message")
         message_template = Template('><https://www.x-kom.pl$hot_shot_url|*$product_name*> is now on sale.\n>Old price: '
                                     '$old_price.\n>New price: $new_price.')
         message_text = message_template.substitute(hot_shot_url=hot_shot_url,
                                                    product_name=product_name,
                                                    old_price=old_price,
                                                    new_price=new_price)
+        logger.debug("Composed message: %s", message_text)
 
         # Send message
+        logger.debug("Sending message")
         slack_client.api_call(
             'chat.postMessage',
             channel=self.__slack_channel,
