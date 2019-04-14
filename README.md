@@ -3,7 +3,7 @@
 Module `XKomProcessor` contains logic for reading the current hot shot deal from [x-kom.pl](https://www.x-kom.pl/) and posting it to Slack.
 Module expects Slack token and channel name to be passed to it as script parameters.
 
-Script `xks` reads parameters from environment variables and uses XKomProcessor module to process [x-kom.pl](https://www.x-kom.pl/) as described above. 
+Script `xks` reads parameters from environment variables and uses XKomProcessor module to process [x-kom.pl](https://www.x-kom.pl/) as described above. Additionally it also retries iun case of failure and logs to file
 
 Both the module and the script save the data read from the website in a CSV-formatted log file. In debug mode the data is also written to STDOUT.
 
