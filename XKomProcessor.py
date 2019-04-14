@@ -8,13 +8,22 @@ from urllib.request import urlopen
 from bs4 import BeautifulSoup
 from slackclient import SlackClient
 
+from exceptions import JSProcessingException, PageLoadingException
+from urllib.error import URLError
+
 logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 
 def _fetch_home_page():
     # Fetch x-kom home page content from the internet
     logger.debug("Fetching x-kom home page")
-    return urlopen('https://www.x-kom.pl/')
+    url = 'https://www.x-kom.pl/'
+    try:
+        return urlopen(url)
+    except URLError as ex:
+        logger.exception("Error fetching x-kom home page from URL %s: %s", url, ex, exc_info=True)
+        raise PageLoadingException(ex)
 
 
 def _parse_home_page(page_content):
@@ -31,7 +40,11 @@ def _parse_home_page(page_content):
     # Get link to product page from parsed home page
     hot_shot_script = soup.find_all('script', {'type': 'text/javascript'})[1].text.strip()
     regexp = re.compile(r"/goracy_strzal/\d+")
-    hot_shot_url = regexp.search(hot_shot_script).group(0)
+    search_result = regexp.search(hot_shot_script)
+    if search_result:
+        hot_shot_url = search_result.group(0)
+    else:
+        raise JSProcessingException("Cannot obtain deal's URL")
     logger.debug("URL to product page: %s", hot_shot_url)
 
     return [product_name, old_price, new_price, hot_shot_url]
