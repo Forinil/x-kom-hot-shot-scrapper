@@ -1,10 +1,23 @@
 import logging.config
 import os
+import sys
 
-from exceptions import ProcessingException
+from tenacity import before_sleep_log, retry, retry_if_exception_type, stop_after_attempt, wait_exponential
+
 from XKomProcessor import XKomProcessor
+from exceptions import ProcessingException
 
 logger = logging.getLogger(__name__)
+
+
+@retry(before_sleep=before_sleep_log(logger, logging.ERROR),  # Log before retrying
+       reraise=True,  # Reraise last exception instead of raising RetryError
+       retry=retry_if_exception_type(ProcessingException),  # Only retry after ProcessingException
+       stop=stop_after_attempt(12),  # Stop after 12 attempts (roughly 136 minutes)
+       wait=wait_exponential(max=8192))  # Increase wait time after each failure exponentially, up to 8192 seconds
+def process_page(page_processor):
+    page_processor.process()
+
 
 if __name__ == '__main__':
     # Calculate default log directory - logs subdirectory of directory containing this script
@@ -50,6 +63,8 @@ if __name__ == '__main__':
 
     # process page
     try:
-        processor.process()
+        process_page(processor)
     except ProcessingException as ex:
         logger.exception("Exception raised while processing: %s", ex, exc_info=True)
+        print("Error determining current Hot Shot Deal (", ex, ") - see application log for details", file=sys.stderr)
+        exit(1)

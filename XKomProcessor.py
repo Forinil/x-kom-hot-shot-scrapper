@@ -22,7 +22,7 @@ def _fetch_home_page():
     try:
         return urlopen(url)
     except URLError as ex:
-        logger.exception("Error fetching x-kom home page from URL %s: %s", url, ex, exc_info=True)
+        logger.exception("Error fetching x-kom home page from URL %s: %s", url, ex, exc_info=False)
         raise PageLoadingException(ex)
 
 
